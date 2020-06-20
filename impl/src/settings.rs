@@ -14,7 +14,8 @@
 
 use semver::Version;
 use serde_derive::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
 pub type CrateSettingsPerVersion = HashMap<Version, CrateSettings>;
 

@@ -421,6 +421,15 @@ impl<'planner> WorkspaceSubplanner<'planner> {
         let own_crate_catalog_entry = self.crate_catalog.entry_for_package_id(&node.id).unwrap();
         let own_package = own_crate_catalog_entry.package();
 
+        // Skip explicitly excluded dependencies
+        if self
+          .settings
+          .exclude_deps
+          .contains(&format!("{}-{}", own_package.name, own_package.version))
+        {
+          return None;
+        }
+
         let checksum_opt =
           package_to_checksum.get(&(own_package.name.clone(), own_package.version.clone()));
 
@@ -494,6 +503,11 @@ impl<'planner> CrateSubplanner<'planner> {
       }
     }
 
+    let is_explicitly_aliased = self
+      .settings
+      .alias_deps
+      .contains(&format!("{}-{}", package.name, package.version));
+
     Ok(CrateContext {
       pkg_name: package.name.clone(),
       pkg_version: package.version.to_string(),
@@ -501,6 +515,7 @@ impl<'planner> CrateSubplanner<'planner> {
       license: self.produce_license(),
       features: self.node.features.clone(),
       is_root_dependency: self.crate_catalog_entry.is_root_dep(),
+      is_explicitly_aliased,
       dependencies: normal_deps,
       proc_macro_dependencies: proc_macro_deps,
       build_dependencies: build_deps,
@@ -548,7 +563,7 @@ impl<'planner> CrateSubplanner<'planner> {
       .crate_settings
       .skipped_deps
       .iter()
-      .cloned()
+      .chain(self.settings.exclude_deps.iter())
       .collect::<HashSet<_>>();
 
     for dep_id in &self.node.dependencies {

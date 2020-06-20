@@ -84,6 +84,7 @@ pub struct CrateContext {
   pub dev_dependencies: Vec<BuildableDependency>,
   pub aliased_dependencies: Vec<DependencyAlias>,
   pub is_root_dependency: bool,
+  pub is_explicitly_aliased: bool,
   pub targets: Vec<BuildableTarget>,
   pub build_script_target: Option<BuildableTarget>,
   pub source_details: SourceDetails,
