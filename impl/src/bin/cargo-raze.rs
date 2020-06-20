@@ -44,6 +44,7 @@ struct Options {
   flag_dryrun: Option<bool>,
   flag_cargo_bin_path: Option<String>,
   flag_output: String,
+  flag_raze_config: Option<String>,
 }
 
 const USAGE: &str = r#"
@@ -51,9 +52,8 @@ Generate BUILD files for your pre-vendored Cargo dependencies.
 
 Usage:
     cargo raze (-h | --help)
-    cargo raze [--verbose] [--quiet] [--color=<WHEN>] [--dryrun] [--cargo-bin-path=<PATH>] [--output=<PATH>]
-    cargo raze <buildprefix> [--verbose] [--quiet] [--color=<WHEN>] [--dryrun] [--cargo-bin-path=<PATH>]
-                             [--output=<PATH>]
+    cargo raze [--verbose] [--quiet] [--color=<WHEN>] [--dryrun] [--cargo-bin-path=<PATH>] [--output=<PATH>] [--raze-config=<PATH>]
+    cargo raze <buildprefix> [--verbose] [--quiet] [--color=<WHEN>] [--dryrun] [--cargo-bin-path=<PATH>] [--output=<PATH>] [--raze-config=<PATH>]
 
 Options:
     -h, --help                         Print this message
@@ -62,15 +62,19 @@ Options:
     --color=<WHEN>                     Coloring: auto, always, never
     -d, --dryrun                       Do not emit any files
     --cargo-bin-path=<PATH>            Path to the cargo binary to be used for loading workspace metadata
-    --output=<PATH>                    Path to output the generated into [default: .].
+    --output=<PATH>                    Path to output the generated into [default: .]
+    --raze-config=<PATH>               Instead of reading the [raze] section from Cargo.toml, read
+                                       it from the provided file. Allows to keep Cargo.toml unmodified.
 "#;
 
 fn main() -> Result<()> {
+  println!("{:?}", std::env::args());
+
   let options: Options = Docopt::new(USAGE)
     .and_then(|d| d.deserialize())
     .unwrap_or_else(|e| e.exit());
 
-  let mut settings = load_settings("Cargo.toml")?;
+  let mut settings = load_settings("Cargo.toml", options.flag_raze_config)?;
   println!("Loaded override settings: {:#?}", settings);
 
   validate_settings(&mut settings)?;
@@ -154,11 +158,17 @@ fn write_to_file_loudly(path: &str, contents: &str) -> Result<()> {
   Ok(())
 }
 
-fn load_settings<T: AsRef<Path>>(cargo_toml_path: T) -> Result<RazeSettings> {
-  let path = cargo_toml_path.as_ref();
-  let mut toml = File::open(path)?;
-  let mut toml_contents = String::new();
-  toml.read_to_string(&mut toml_contents)?;
+fn load_settings<T, S>(cargo_toml_path: T, raze_config_path: Option<S>) -> Result<RazeSettings>
+where
+  T: AsRef<Path>,
+  S: AsRef<Path>,
+{
+  let mut toml_contents = fs::read_to_string(cargo_toml_path)?;
+  if let Some(path) = raze_config_path {
+    let mut raze_config = File::open(path)?;
+    toml_contents.push('\n'); // line break in case of there is non at the end
+    raze_config.read_to_string(&mut toml_contents)?;
+  }
   toml::from_str::<CargoToml>(&toml_contents)
     .map_err(|e| e.into())
     .map(|toml| toml.raze)

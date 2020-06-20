@@ -78,6 +78,25 @@ pub struct RazeSettings {
    */
   #[serde(default = "default_raze_settings_field_gen_buildrs")]
   pub default_gen_buildrs: bool,
+
+  /**
+   * Explicitly exclude dependencies from the dependency tree, in the form
+   * "{dep-name}-{dep-version}".
+   *
+   * Useful when excluding local dependencies or patching dependencies.
+   */
+  #[serde(default)]
+  pub exclude_deps: HashSet<String>,
+
+  /**
+   * Explicitly alias dependencies from the dependency tree, , in the form
+   * "{dep-name}-{dep-version}".
+   *
+   * By default, only direct dependencies of the crate are aliased in the BUILD file.
+   * Useful when exposing dependencies for building other local crates.
+   */
+  #[serde(default)]
+  pub alias_deps: HashSet<String>,
 }
 
 /** Override settings for individual crates (as part of `RazeSettings`). */
@@ -257,6 +276,8 @@ pub mod testing {
       genmode: GenMode::Remote,
       output_buildfile_suffix: "BUILD".to_owned(),
       default_gen_buildrs: default_raze_settings_field_gen_buildrs(),
+      exclude_deps: Default::default(),
+      alias_deps: Default::default(),
     }
   }
 }
