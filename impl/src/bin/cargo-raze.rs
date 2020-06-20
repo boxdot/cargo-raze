@@ -43,7 +43,7 @@ struct Options {
   flag_target: Option<String>,
   flag_dryrun: Option<bool>,
   flag_cargo_bin_path: Option<String>,
-  flag_output: String,
+  flag_output: Option<String>,
   flag_raze_config: Option<String>,
 }
 
@@ -62,7 +62,7 @@ Options:
     --color=<WHEN>                     Coloring: auto, always, never
     -d, --dryrun                       Do not emit any files
     --cargo-bin-path=<PATH>            Path to the cargo binary to be used for loading workspace metadata
-    --output=<PATH>                    Path to output the generated into [default: .]
+    --output=<PATH>                    Path to output the generated files into
     --raze-config=<PATH>               Instead of reading the [raze] section from Cargo.toml, read
                                        it from the provided file. Allows to keep Cargo.toml unmodified.
 "#;
@@ -85,6 +85,13 @@ fn main() -> Result<()> {
   };
   let mut planner = BuildPlannerImpl::new(&mut *metadata_fetcher);
 
+  // derive output path: --output overrides setting output
+  let output_path = match (options.flag_output, settings.output.clone()) {
+    (Some(flag_output), _) => flag_output,
+    (None, Some(setting_output)) => setting_output,
+    _ => ".".to_string(),
+  };
+
   let toml_path = PathBuf::from("./Cargo.toml");
   let lock_path_opt = fs::metadata("./Cargo.lock")
     .ok()
@@ -97,7 +104,7 @@ fn main() -> Result<()> {
   let planned_build = planner.plan_build(&settings, files, platform_details)?;
   let mut bazel_renderer = BazelRenderer::new();
   let render_details = RenderDetails {
-    path_prefix: options.flag_output,
+    path_prefix: output_path,
     buildfile_suffix: settings.output_buildfile_suffix,
   };
 

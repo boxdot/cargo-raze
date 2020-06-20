@@ -15,7 +15,6 @@
 use semver::Version;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 
 pub type CrateSettingsPerVersion = HashMap<Version, CrateSettings>;
 
@@ -98,6 +97,9 @@ pub struct RazeSettings {
    */
   #[serde(default)]
   pub alias_deps: HashSet<String>,
+
+  #[serde(default)]
+  pub output: Option<String>,
 }
 
 /** Override settings for individual crates (as part of `RazeSettings`). */
@@ -277,6 +279,7 @@ pub mod testing {
       genmode: GenMode::Remote,
       output_buildfile_suffix: "BUILD".to_owned(),
       default_gen_buildrs: default_raze_settings_field_gen_buildrs(),
+      output: None,
       exclude_deps: Default::default(),
       alias_deps: Default::default(),
     }
